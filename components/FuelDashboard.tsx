@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FuelIssue } from '../types';
 import { StatCard } from './StatCard';
 import { IssueDetailModal } from './IssueDetailModal';
-import { Activity, CheckCircle, AlertTriangle, AlertOctagon, Building2 } from 'lucide-react';
+import { Activity, AlertOctagon, Building2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface Props {
@@ -16,8 +16,6 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
     
     const stats = useMemo(() => {
         const total = data.length;
-        const resolved = data.filter(d => d.CompletionTime).length;
-        const pending = total - resolved;
         
         // 1. Calculate Top Issue Types (Top 1 and Top 3 list)
         const issueCounts: Record<string, number> = {};
@@ -57,8 +55,6 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
         
         return { 
             total, 
-            resolved, 
-            pending, 
             topIssue, 
             topIssueCount, 
             top3Issues,
@@ -77,28 +73,12 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
     return (
         <div className="space-y-6 animate-fade-in">
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard 
                     title="Total Fuel Issues" 
                     value={stats.total} 
                     icon={Activity} 
                     color="blue" 
-                    trend="+12% vs last week" 
-                    trendUp={false}
-                />
-                <StatCard 
-                    title="Pending Resolution" 
-                    value={stats.pending} 
-                    icon={AlertTriangle} 
-                    color="orange" 
-                />
-                <StatCard 
-                    title="Resolved Rate" 
-                    value={`${stats.total ? Math.round((stats.resolved / stats.total) * 100) : 0}%`} 
-                    icon={CheckCircle} 
-                    color="green" 
-                    trend="+5%"
-                    trendUp={true}
                 />
                 <StatCard 
                     title="Top Issue Type" 

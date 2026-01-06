@@ -4,7 +4,7 @@ import { fetchDashboardData } from './services/dataService';
 import { FuelDashboard } from './components/FuelDashboard';
 import { AfterSalesDashboard } from './components/AfterSalesDashboard';
 import { UploadModal } from './components/UploadModal';
-import { LayoutDashboard, Wrench, RefreshCw, AlertCircle, Menu, UploadCloud, Search, Calendar, X } from 'lucide-react';
+import { LayoutDashboard, Wrench, RefreshCw, AlertCircle, Menu, UploadCloud, Search, Calendar, X, Filter, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
 import { format } from 'date-fns';
 
@@ -24,6 +24,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [issueSourceFilter, setIssueSourceFilter] = useState('All');
 
   // Poll for data every 30 seconds, but only if not in manual mode
   useEffect(() => {
@@ -112,16 +113,26 @@ function App() {
         });
     }
 
+    // 3. Issue Faced By Filter (Only for Fuel Tab)
+    if (activeTab === SheetType.FUEL && issueSourceFilter !== 'All') {
+        data = data.filter(item => {
+            const issue = item as FuelIssue;
+            // Loose comparison to handle potential casing differences or trimming
+            return issue.IssueFacedBy?.trim() === issueSourceFilter;
+        });
+    }
+
     return data;
-  }, [activeTab, fuelData, afterSalesData, searchTerm, startDate, endDate]);
+  }, [activeTab, fuelData, afterSalesData, searchTerm, startDate, endDate, issueSourceFilter]);
 
   const clearFilters = () => {
       setSearchTerm('');
       setStartDate('');
       setEndDate('');
+      setIssueSourceFilter('All');
   };
 
-  const hasActiveFilters = searchTerm || startDate || endDate;
+  const hasActiveFilters = searchTerm || startDate || endDate || (activeTab === SheetType.FUEL && issueSourceFilter !== 'All');
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
@@ -222,9 +233,10 @@ function App() {
         </header>
 
         {/* Filter Bar */}
-        <div className="px-6 py-4 bg-white border-b border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between z-30">
-            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                <div className="relative group">
+        <div className="px-6 py-4 bg-white border-b border-slate-200 shadow-sm flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between z-30">
+            <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto flex-wrap">
+                {/* Search */}
+                <div className="relative group w-full md:w-auto">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={18} />
                     <input 
                         type="text" 
@@ -235,34 +247,52 @@ function App() {
                     />
                 </div>
                 
-                <div className="flex items-center gap-2">
-                    <div className="relative group">
+                {/* Date Range */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <div className="relative group flex-1 md:flex-initial">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={16} />
                         <input 
                             type="date" 
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className="pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-full"
                         />
                     </div>
                     <span className="text-slate-400 text-sm font-medium">to</span>
-                    <div className="relative group">
+                    <div className="relative group flex-1 md:flex-initial">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={16} />
                         <input 
                             type="date" 
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
                             min={startDate}
-                            className="pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className="pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-full"
                         />
                     </div>
                 </div>
+
+                {/* Issue Faced By Filter (Only for Fuel) */}
+                {activeTab === SheetType.FUEL && (
+                     <div className="relative group w-full md:w-auto">
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={16} />
+                        <select 
+                            value={issueSourceFilter}
+                            onChange={(e) => setIssueSourceFilter(e.target.value)}
+                            className="pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer w-full md:w-48"
+                        >
+                            <option value="All">All Sources</option>
+                            <option value="Fuel Team">Fuel Team</option>
+                            <option value="Customer/Partner">Customer/Partner</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                    </div>
+                )}
             </div>
 
             {hasActiveFilters && (
                 <button 
                     onClick={clearFilters}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium ml-auto md:ml-0"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium ml-auto xl:ml-0"
                 >
                     <X size={16} />
                     Clear Filters

@@ -67,7 +67,8 @@ export const mapToFuelIssues = (data: any[]): FuelIssue[] => {
             IssueList: getValue(row, ['Issue(s) List', 'Issue List']),
             Status: completionTime ? 'Resolved' : 'Pending',
             Remarks: getValue(row, ['Remarks']),
-            AppType: getValue(row, ['Facing Issue with which app', 'App Type'])
+            AppType: getValue(row, ['Facing Issue with which app', 'App Type']),
+            IssueFacedBy: getValue(row, ['Issue faced by', 'IssueFacedBy'])
         };
     });
 };

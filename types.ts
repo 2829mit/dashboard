@@ -20,6 +20,7 @@ export interface FuelIssue {
     Status: 'Pending' | 'Resolved' | 'In Progress'; // Derived or simulated
     Remarks: string;
     AppType: string; // "Facing Issue with which app?"
+    IssueFacedBy: string; // "Issue faced by" - 'Fuel Team' | 'Customer/Partner'
 }
 
 // Matches "After Sales" Sheet

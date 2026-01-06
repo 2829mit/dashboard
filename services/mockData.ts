@@ -41,7 +41,8 @@ export const generateFuelData = (count: number): FuelIssue[] => {
             IssueList: getRandomElement(['Connectivity', 'Hardware', 'Software', 'User Error']),
             Status: end ? 'Resolved' : 'Pending',
             Remarks: 'Investigating issue...',
-            AppType: getRandomElement(['Operator App', 'Partner App', 'Manager App'])
+            AppType: getRandomElement(['Operator App', 'Partner App', 'Manager App']),
+            IssueFacedBy: getRandomElement(['Fuel Team', 'Customer/Partner'])
         };
     });
 };
