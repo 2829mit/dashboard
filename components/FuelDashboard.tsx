@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FuelIssue } from '../types';
 import { StatCard } from './StatCard';
+import { IssueDetailModal } from './IssueDetailModal';
 import { Activity, CheckCircle, AlertTriangle, AlertOctagon, Building2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
@@ -11,6 +12,7 @@ interface Props {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export const FuelDashboard: React.FC<Props> = ({ data }) => {
+    const [selectedIssue, setSelectedIssue] = useState<FuelIssue | null>(null);
     
     const stats = useMemo(() => {
         const total = data.length;
@@ -166,7 +168,7 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
              <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="text-lg font-bold text-slate-800">Recent Reported Issues</h3>
-                    <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</button>
+                    <span className="text-xs text-slate-400 font-medium">Click a row for full details</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-slate-600">
@@ -181,10 +183,14 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
                         </thead>
                         <tbody>
                             {data.slice(0, 5).map((row) => (
-                                <tr key={row.Id} className="bg-white border-b hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-medium text-slate-900">#{row.Id}</td>
+                                <tr 
+                                    key={row.Id} 
+                                    onClick={() => setSelectedIssue(row)}
+                                    className="bg-white border-b hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                                >
+                                    <td className="px-6 py-4 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">#{row.Id}</td>
                                     <td className="px-6 py-4">{row.CompanyName}</td>
-                                    <td className="px-6 py-4">{row.ReportedIssue}</td>
+                                    <td className="px-6 py-4 max-w-xs truncate">{row.ReportedIssue}</td>
                                     <td className="px-6 py-4">{row.FuelTeamSPOC}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${row.Status === 'Resolved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
@@ -197,6 +203,13 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
                     </table>
                 </div>
             </div>
+
+            <IssueDetailModal 
+                isOpen={!!selectedIssue} 
+                onClose={() => setSelectedIssue(null)} 
+                data={selectedIssue}
+                title="Fuel Issue"
+            />
         </div>
     );
 };

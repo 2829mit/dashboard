@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AfterSalesIssue } from '../types';
 import { StatCard } from './StatCard';
+import { IssueDetailModal } from './IssueDetailModal';
 import { ShieldAlert, Wrench, Users, Cpu, Server } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
+    const [selectedIssue, setSelectedIssue] = useState<AfterSalesIssue | null>(null);
     
     const stats = useMemo(() => {
         const total = data.length;
@@ -101,8 +103,9 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
 
             {/* Hardware Table Preview */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-6 border-b border-slate-100">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="text-lg font-bold text-slate-800">Hardware & Firmware Status</h3>
+                    <span className="text-xs text-slate-400 font-medium">Click a row for full details</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-slate-600">
@@ -117,18 +120,29 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
                         </thead>
                         <tbody>
                             {data.slice(0, 5).map((row) => (
-                                <tr key={row.Id} className="bg-white border-b hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-medium text-slate-900">#{row.Id}</td>
+                                <tr 
+                                    key={row.Id} 
+                                    onClick={() => setSelectedIssue(row)}
+                                    className="bg-white border-b hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                                >
+                                    <td className="px-6 py-4 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">#{row.Id}</td>
                                     <td className="px-6 py-4">{row.Product}</td>
                                     <td className="px-6 py-4 font-mono text-xs">{row.HardwareVersion}</td>
                                     <td className="px-6 py-4 font-mono text-xs">{row.FirmwareVersion}</td>
-                                    <td className="px-6 py-4 text-red-600">{row.IssueList}</td>
+                                    <td className="px-6 py-4 text-red-600 truncate max-w-xs">{row.IssueList}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <IssueDetailModal 
+                isOpen={!!selectedIssue} 
+                onClose={() => setSelectedIssue(null)} 
+                data={selectedIssue}
+                title="After Sales Issue"
+            />
         </div>
     );
 };
