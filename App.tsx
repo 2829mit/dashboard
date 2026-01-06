@@ -280,7 +280,7 @@ function App() {
                             onChange={(e) => setIssueSourceFilter(e.target.value)}
                             className="pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all appearance-none cursor-pointer w-full md:w-48"
                         >
-                            <option value="All">All Sources</option>
+                            <option value="All">Issue Faced by</option>
                             <option value="Fuel Team">Fuel Team</option>
                             <option value="Customer/Partner">Customer/Partner</option>
                         </select>
