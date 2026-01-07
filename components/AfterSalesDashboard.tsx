@@ -2,12 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { AfterSalesIssue } from '../types';
 import { StatCard } from './StatCard';
 import { IssueDetailModal } from './IssueDetailModal';
-import { ShieldAlert, Wrench, Users, Cpu, Server } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { ShieldAlert, Cpu, Server, Scale, Factory, Radio, CheckCircle2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface Props {
     data: AfterSalesIssue[];
 }
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
 export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
     const [selectedIssue, setSelectedIssue] = useState<AfterSalesIssue | null>(null);
@@ -18,18 +20,35 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
         const amc = data.filter(d => d.WarrantyStatus === 'AMC').length;
         const critical = data.filter(d => d.IssueBuckets === 'Critical').length;
         
-        return { total, warranty, amc, critical };
+        // Calibration Issues: Where variance between App and Manual Dip is > 5%
+        const calibrationIssues = data.filter(d => {
+            if(!d.ManualDipLevel || !d.AppFuelLevel) return false;
+            const diff = Math.abs(d.ManualDipLevel - d.AppFuelLevel);
+            const pct = (diff / d.ManualDipLevel) * 100;
+            return pct > 5;
+        }).length;
+
+        return { total, warranty, amc, critical, calibrationIssues };
     }, [data]);
 
-    const issuesByHardware = useMemo(() => {
+    // Data for Vendor Distribution (Simple Bar)
+    const vendorData = useMemo(() => {
         const counts: Record<string, number> = {};
-        data.forEach(d => counts[d.HardwareVersion] = (counts[d.HardwareVersion] || 0) + 1);
-        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => a.name.localeCompare(b.name));
+        data.forEach(d => {
+            const v = d.DUVendor || 'Unknown';
+            counts[v] = (counts[v] || 0) + 1;
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [data]);
 
-    const issuesByBucket = useMemo(() => {
+    // Data for FCC Reasons (Pie)
+    const fccData = useMemo(() => {
         const counts: Record<string, number> = {};
-        data.forEach(d => counts[d.IssueBuckets] = (counts[d.IssueBuckets] || 0) + 1);
+        data.forEach(d => {
+            if (d.ReasonFCCNotWorking) {
+                counts[d.ReasonFCCNotWorking] = (counts[d.ReasonFCCNotWorking] || 0) + 1;
+            }
+        });
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [data]);
 
@@ -44,18 +63,18 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
                     color="blue" 
                 />
                 <StatCard 
+                    title="Calibration Alerts" 
+                    value={stats.calibrationIssues} 
+                    icon={Scale} 
+                    color="orange" 
+                    trend={stats.calibrationIssues > 5 ? "High Variance" : "Stable"}
+                    trendUp={stats.calibrationIssues <= 5}
+                />
+                <StatCard 
                     title="In Warranty" 
                     value={stats.warranty} 
                     icon={ShieldAlert} 
                     color="green" 
-                    trend="Healthy"
-                    trendUp={true}
-                />
-                <StatCard 
-                    title="AMC Clients" 
-                    value={stats.amc} 
-                    icon={Users} 
-                    color="orange" 
                 />
                  <StatCard 
                     title="Critical H/W Issues" 
@@ -67,44 +86,69 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
                 />
             </div>
 
+            {/* Hardware & FCC Analytics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Hardware Version Analysis */}
+                
+                {/* Vendor Analysis */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6">Issues by Hardware Version</h3>
-                    <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={issuesByHardware}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip cursor={{ fill: '#f8fafc' }} />
-                                <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={3} dot={{r: 4}} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                    <div className="flex items-center gap-2 mb-6">
+                        <Factory className="text-slate-400" size={20} />
+                        <h3 className="text-lg font-bold text-slate-800">DU Vendor Issues</h3>
                     </div>
-                </div>
-
-                {/* Issue Buckets */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6">Issue Severity Buckets</h3>
-                    <div className="h-64">
+                    <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={issuesByBucket} layout="vertical">
+                            <BarChart data={vendorData} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" width={100} fontSize={12} tickLine={false} axisLine={false} />
                                 <Tooltip cursor={{ fill: '#f8fafc' }} />
-                                <Bar dataKey="value" fill="#f97316" radius={[0, 4, 4, 0]} barSize={20} />
+                                <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
+
+                {/* FCC Issues */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Radio className="text-red-400" size={20} />
+                        <h3 className="text-lg font-bold text-slate-800">FCC Failures</h3>
+                    </div>
+                    {fccData.length > 0 ? (
+                        <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={fccData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={40}
+                                        outerRadius={60}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {fccData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend verticalAlign="bottom" height={36} iconSize={8} fontSize={10}/>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-48 flex items-center justify-center text-slate-400 text-sm">
+                            <CheckCircle2 size={32} className="mb-2 text-green-500" />
+                            <p>No FCC Issues Reported</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Hardware Table Preview */}
+            {/* Detailed Table Preview */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">Hardware & Firmware Status</h3>
+                    <h3 className="text-lg font-bold text-slate-800">Detailed Hardware Report</h3>
                     <span className="text-xs text-slate-400 font-medium">Click a row for full details</span>
                 </div>
                 <div className="overflow-x-auto">
@@ -112,26 +156,37 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                             <tr>
                                 <th className="px-6 py-3">ID</th>
-                                <th className="px-6 py-3">Product</th>
-                                <th className="px-6 py-3">H/W Version</th>
-                                <th className="px-6 py-3">F/W Version</th>
-                                <th className="px-6 py-3">Issue List</th>
+                                <th className="px-6 py-3">Job #</th>
+                                <th className="px-6 py-3">Vendor</th>
+                                <th className="px-6 py-3">Controller</th>
+                                <th className="px-6 py-3">Manual Dip</th>
+                                <th className="px-6 py-3">App Level</th>
+                                <th className="px-6 py-3 text-right">Variance</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {data.slice(0, 5).map((row) => (
-                                <tr 
-                                    key={row.Id} 
-                                    onClick={() => setSelectedIssue(row)}
-                                    className="bg-white border-b hover:bg-blue-50/50 cursor-pointer transition-colors group"
-                                >
-                                    <td className="px-6 py-4 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">#{row.Id}</td>
-                                    <td className="px-6 py-4">{row.Product}</td>
-                                    <td className="px-6 py-4 font-mono text-xs">{row.HardwareVersion}</td>
-                                    <td className="px-6 py-4 font-mono text-xs">{row.FirmwareVersion}</td>
-                                    <td className="px-6 py-4 text-red-600 truncate max-w-xs">{row.IssueList}</td>
-                                </tr>
-                            ))}
+                            {data.slice(0, 10).map((row) => {
+                                const variance = Math.abs((row.ManualDipLevel || 0) - (row.AppFuelLevel || 0));
+                                const isHighVariance = variance > (row.ManualDipLevel * 0.05); // > 5%
+
+                                return (
+                                    <tr 
+                                        key={row.Id} 
+                                        onClick={() => setSelectedIssue(row)}
+                                        className="bg-white border-b hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                                    >
+                                        <td className="px-6 py-4 font-medium text-slate-900 group-hover:text-blue-600 transition-colors">#{row.Id}</td>
+                                        <td className="px-6 py-4 font-mono text-xs">{row.JobNumber || '-'}</td>
+                                        <td className="px-6 py-4">{row.DUVendor || '-'}</td>
+                                        <td className="px-6 py-4">{row.RATGController || '-'}</td>
+                                        <td className="px-6 py-4">{row.ManualDipLevel || 0}</td>
+                                        <td className="px-6 py-4">{row.AppFuelLevel || 0}</td>
+                                        <td className={`px-6 py-4 text-right font-bold ${isHighVariance ? 'text-red-500' : 'text-green-500'}`}>
+                                            {variance.toFixed(1)} L
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

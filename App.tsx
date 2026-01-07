@@ -4,9 +4,9 @@ import { fetchDashboardData } from './services/dataService';
 import { FuelDashboard } from './components/FuelDashboard';
 import { AfterSalesDashboard } from './components/AfterSalesDashboard';
 import { UploadModal } from './components/UploadModal';
-import { LayoutDashboard, Wrench, RefreshCw, AlertCircle, Menu, UploadCloud, Search, Calendar, X, Filter, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Wrench, RefreshCw, AlertCircle, Menu, UploadCloud, Search, Calendar, X, Filter, ChevronDown, Clock } from 'lucide-react';
 import clsx from 'clsx';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 function App() {
   const [activeTab, setActiveTab] = useState<SheetType>(SheetType.FUEL);
@@ -25,6 +25,7 @@ function App() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [issueSourceFilter, setIssueSourceFilter] = useState('All');
+  const [dateRangePreset, setDateRangePreset] = useState('ALL');
 
   // Poll for data every 30 seconds, but only if not in manual mode
   useEffect(() => {
@@ -64,6 +65,25 @@ function App() {
     }
     setLastSynced(new Date());
   }, []);
+
+  const handlePresetChange = (preset: string) => {
+    setDateRangePreset(preset);
+    if (preset === 'ALL') {
+        setStartDate('');
+        setEndDate('');
+    } else {
+        const end = new Date();
+        const start = subDays(end, parseInt(preset));
+        setStartDate(format(start, 'yyyy-MM-dd'));
+        setEndDate(format(end, 'yyyy-MM-dd'));
+    }
+  };
+
+  const handleDateChange = (type: 'start' | 'end', val: string) => {
+      if (type === 'start') setStartDate(val);
+      else setEndDate(val);
+      setDateRangePreset('CUSTOM');
+  };
 
   // Filtering Logic
   const filteredData = useMemo(() => {
@@ -130,6 +150,7 @@ function App() {
       setStartDate('');
       setEndDate('');
       setIssueSourceFilter('All');
+      setDateRangePreset('ALL');
   };
 
   const hasActiveFilters = searchTerm || startDate || endDate || (activeTab === SheetType.FUEL && issueSourceFilter !== 'All');
@@ -247,26 +268,42 @@ function App() {
                     />
                 </div>
                 
-                {/* Date Range */}
-                <div className="flex items-center gap-2 w-full md:w-auto">
+                {/* Date Group */}
+                <div className="flex items-center gap-2 w-full md:w-auto bg-slate-50 p-1 rounded-lg border border-slate-200">
+                    <div className="relative group">
+                         <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <Clock size={14} />
+                         </div>
+                         <select
+                            value={dateRangePreset}
+                            onChange={(e) => handlePresetChange(e.target.value)}
+                            className="pl-8 pr-4 py-1.5 bg-transparent text-sm text-slate-600 font-medium focus:outline-none cursor-pointer hover:text-slate-900 border-none focus:ring-0"
+                        >
+                            <option value="ALL">All Time</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="60">Last 60 Days</option>
+                            <option value="CUSTOM" disabled hidden>Custom</option>
+                        </select>
+                    </div>
+
+                    <div className="h-6 w-px bg-slate-300"></div>
+
                     <div className="relative group flex-1 md:flex-initial">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={16} />
                         <input 
                             type="date" 
                             value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-full"
+                            onChange={(e) => handleDateChange('start', e.target.value)}
+                            className="px-2 py-1 bg-transparent text-sm text-slate-600 focus:outline-none focus:text-blue-600 focus:font-semibold transition-all w-full"
                         />
                     </div>
-                    <span className="text-slate-400 text-sm font-medium">to</span>
+                    <span className="text-slate-400 text-xs font-medium">to</span>
                     <div className="relative group flex-1 md:flex-initial">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500" size={16} />
                         <input 
                             type="date" 
                             value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
+                            onChange={(e) => handleDateChange('end', e.target.value)}
                             min={startDate}
-                            className="pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-full"
+                            className="px-2 py-1 bg-transparent text-sm text-slate-600 focus:outline-none focus:text-blue-600 focus:font-semibold transition-all w-full"
                         />
                     </div>
                 </div>

@@ -16,6 +16,16 @@ const getValue = (row: any, possibleKeys: string[]): string => {
     return '';
 };
 
+// Helper to safely parse numbers from potential strings
+const getNumber = (row: any, possibleKeys: string[]): number => {
+    const val = getValue(row, possibleKeys);
+    if (!val) return 0;
+    // Remove non-numeric chars except dot (e.g., "100 Litres" -> 100)
+    const cleanVal = val.replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleanVal);
+    return isNaN(num) ? 0 : num;
+};
+
 const parseDate = (val: any): string => {
     if (!val) return '';
     // Handle Excel serial date
@@ -64,6 +74,8 @@ export const mapToFuelIssues = (data: any[]): FuelIssue[] => {
             Product: getValue(row, ['Product']),
             // Complex column mapping based on prompt
             ReportedIssue: getValue(row, ['Customer/Partner Reported Issue', 'Reported Issue']),
+            InternalTeamReportedIssue: getValue(row, ['Internal Team Reported Issue', 'Internal Issue']),
+            DetailedDescription: getValue(row, ['Describe the issue in detail', 'Description']),
             IssueList: getValue(row, ['Issue(s) List', 'Issue List']),
             Status: completionTime ? 'Resolved' : 'Pending',
             Remarks: getValue(row, ['Remarks']),
@@ -91,7 +103,20 @@ export const mapToAfterSalesIssues = (data: any[]): AfterSalesIssue[] => {
             HardwareVersion: getValue(row, ['RATG Hardware Version', 'Hardware Version']),
             OperatorAppVersion: getValue(row, ['Operator App Version']),
             IssueList: getValue(row, ['Issue(s) List', 'Hardware Issue', 'Issue List']),
-            FirmwareVersion: getValue(row, ['FCC Firmware Version', 'Firmware Version'])
+            FirmwareVersion: getValue(row, ['FCC Firmware Version', 'Firmware Version']),
+            
+            // New Columns Mapping
+            RATGController: getValue(row, ['RATG Controller']),
+            ManualDipLevel: getNumber(row, ['Manual Dip', 'ManualDip']),
+            AppFuelLevel: getNumber(row, ['App Fuel Level', 'App', 'Fuel Level as visible']),
+            DispenseOrderQty: getNumber(row, ['Dispense Order Quantity', 'Order Quantity']),
+            DispensedQty: getNumber(row, ['Dispensed Quantity']),
+            JobNumber: getValue(row, ['JOB Number', 'RFS', 'RFD']),
+            Remarks: getValue(row, ['Remarks']),
+            DUVendor: getValue(row, ['DU Vendor']),
+            FCCHardwareVersion: getValue(row, ['FCC Hardware Version']),
+            OrderID: getValue(row, ['Order ID']),
+            ReasonFCCNotWorking: getValue(row, ['Reasons for FCC Not Working'])
         };
     });
 };
