@@ -43,7 +43,7 @@ const getTechLayer = (issue: string): string => {
     if (lower.includes('app') || lower.includes('software') || lower.includes('finish button') || lower.includes('order stuck') || lower.includes('otp')) return 'App';
     if (lower.includes('atg') || lower.includes('sensor') || lower.includes('battery') || lower.includes('hardware') || lower.includes('pump')) return 'Hardware';
     if (lower.includes('bluetooth') || lower.includes('connectivity') || lower.includes('network') || lower.includes('offline')) return 'Connectivity';
-    if (lower.includes('sync') || lower.includes('data') || lower.includes('mismatch') || lower.includes('backend')) return 'Data Sync';
+    if (lower.includes('sync') || lower.includes('data') || lower.includes('mismatch') || lower.includes('backend') || lower.includes('correction')) return 'Data Sync';
     return 'Other';
 };
 
@@ -58,16 +58,19 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
     }>({ isOpen: false, title: '', issues: [] });
     
     const stats = useMemo(() => {
-        const total = data.length;
-        
         // 1. Calculate Top Issue Types (splitting multi-values for accuracy)
+        // AND Calculate Total Detected Issues (sum of all splits)
         const issueCounts: Record<string, number> = {};
+        let totalDetectedIssues = 0;
+
         data.forEach(d => {
             const issues = getIndividualIssues(d.IssueList);
             issues.forEach(issue => {
                 issueCounts[issue] = (issueCounts[issue] || 0) + 1;
+                totalDetectedIssues++;
             });
         });
+
         const sortedIssues = Object.entries(issueCounts).sort((a, b) => b[1] - a[1]);
         
         // Main stat (Top 1)
@@ -98,7 +101,7 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
             value: count
         }));
 
-        // 3. Average Daily Issues
+        // 3. Average Daily Issues (Based on tickets/rows, not split issues, as date applies to the ticket)
         const uniqueDates = new Set(data
             .filter(d => d.StartTime)
             .map(d => {
@@ -111,10 +114,11 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
             .filter(Boolean)
         ).size;
         
-        const avgDaily = uniqueDates > 0 ? (total / uniqueDates).toFixed(1) : "0";
+        // We use totalDetectedIssues for consistency with the first KPI
+        const avgDaily = uniqueDates > 0 ? (totalDetectedIssues / uniqueDates).toFixed(1) : "0";
         
         return { 
-            total, 
+            total: totalDetectedIssues, // UPDATED: Now uses sum of detected issues, not row count
             topIssue, 
             topIssueCount, 
             top3Issues,
@@ -221,7 +225,10 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
                 }
                 
                 const entry = grouped.get(key)!;
-                entry.count++;
+                // Count individual issues for trend intensity
+                const issueCount = getIndividualIssues(d.IssueList).length;
+                entry.count += issueCount;
+                
                 if (d.CompanyName) entry.customers.add(d.CompanyName);
             } catch (e) { }
         });
@@ -285,13 +292,13 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard 
-                    title="Total Fuel Issues" 
+                    title="Total Detected Faults" 
                     value={stats.total} 
                     icon={Activity} 
                     color="blue" 
                 />
                  <StatCard 
-                    title="Avg Daily Issues" 
+                    title="Avg Daily Faults" 
                     value={stats.avgDaily} 
                     icon={Calendar} 
                     color="orange" 
@@ -447,7 +454,7 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
                             <YAxis fontSize={12} tickLine={false} axisLine={false} />
                             <Tooltip 
                                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                formatter={(value: number) => [`${value} issues`, 'Avg per Customer']}
+                                formatter={(value: number) => [`${value} faults`, 'Avg Faults per Customer']}
                             />
                             <Line 
                                 type="monotone" 
@@ -461,7 +468,7 @@ export const FuelDashboard: React.FC<Props> = ({ data }) => {
                     </ResponsiveContainer>
                 </div>
                 <p className="text-xs text-slate-400 mt-2 text-center">
-                    Shows the average number of issues reported divided by the number of unique customers active in that month.
+                    Shows the average number of specific technical faults per customer ticket over time.
                 </p>
             </div>
 
