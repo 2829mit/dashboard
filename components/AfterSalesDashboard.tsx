@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AfterSalesIssue } from '../types';
 import { StatCard } from './StatCard';
 import { IssueDetailModal } from './IssueDetailModal';
-import { ShieldAlert, Cpu, Server, Scale, Factory, Radio, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, Cpu, Server, Scale, Factory, Radio, CheckCircle2, AlertTriangle, CircuitBoard } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface Props {
@@ -10,6 +10,13 @@ interface Props {
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
+
+const SEVERITY_COLORS: Record<string, string> = {
+    'Critical': '#ef4444', // Red
+    'Major': '#f97316',    // Orange
+    'Minor': '#3b82f6',    // Blue
+    'Unspecified': '#94a3b8' // Slate
+};
 
 export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
     const [selectedIssue, setSelectedIssue] = useState<AfterSalesIssue | null>(null);
@@ -52,6 +59,30 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [data]);
 
+    // Data for Severity Bucket
+    const severityData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        data.forEach(d => {
+            const bucket = d.IssueBuckets || 'Unspecified';
+            counts[bucket] = (counts[bucket] || 0) + 1;
+        });
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1]) // Sort descending
+            .map(([name, value]) => ({ name, value }));
+    }, [data]);
+
+    // Data for Hardware Version
+    const hardwareVersionData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        data.forEach(d => {
+            const version = d.HardwareVersion || 'Unknown';
+            counts[version] = (counts[version] || 0) + 1;
+        });
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1]) // Sort descending
+            .map(([name, value]) => ({ name, value }));
+    }, [data]);
+
     return (
         <div className="space-y-6 animate-fade-in">
              {/* KPI Cards */}
@@ -84,6 +115,67 @@ export const AfterSalesDashboard: React.FC<Props> = ({ data }) => {
                     trend="Requires Action"
                     trendUp={false}
                 />
+            </div>
+
+            {/* Severity & Hardware Version Section (RESTORED) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Issue Severity Bucket */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-2 mb-6">
+                        <AlertTriangle className="text-orange-500" size={20} />
+                        <h3 className="text-lg font-bold text-slate-800">Issue Severity Buckets</h3>
+                    </div>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={severityData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {severityData.map((entry, index) => (
+                                        <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={SEVERITY_COLORS[entry.name] || COLORS[index % COLORS.length]} 
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Issues By Hardware Version */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-2 mb-6">
+                        <CircuitBoard className="text-purple-500" size={20} />
+                        <h3 className="text-lg font-bold text-slate-800">Issues By Hardware Version</h3>
+                    </div>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={hardwareVersionData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis 
+                                    dataKey="name" 
+                                    fontSize={12} 
+                                    tickLine={false} 
+                                    axisLine={false}
+                                />
+                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                                <Tooltip cursor={{ fill: '#f8fafc' }} />
+                                <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={40} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
             </div>
 
             {/* Hardware & FCC Analytics */}
